@@ -1,8 +1,9 @@
 import { moreIdeas } from './catalog-more.js';
+import { naturePlaces } from './nature.js';
 
 export const trips = {
   mini: { name: 'Mini-Moon', start: '2028-06-21', days: 9, duration: '7–10 Tage', budget: 5000 },
-  grand: { name: 'Große Flitterwochen', start: '2028-12-12', days: 21, duration: 'ca. 21 Tage', budget: 14000 },
+  grand: { name: 'Große Flitterwochen', start: '2028-12-12', days: 21, duration: '20–25 Tage insgesamt', budget: 14000 },
 };
 
 export const interests = ['Strand', 'Wandern', 'Natur', 'Abenteuer', 'Party', 'Städte', 'Kultur', 'Wellness', 'Romantik'];
@@ -65,10 +66,10 @@ export const destinations = [...ideas,...moreIdeas].map(([id,name,country,trip,b
 }));
 
 export const places = Object.fromEntries(destinations.map(destination => [destination.id, destination]));
-Object.assign(places, {
-  calafate: { name:'El Calafate', country:'Argentinien', lat:-50.34, lon:-72.27, night:185, arrival:340, food:90, experiences:['Perito-Moreno-Gletscher','Laguna Nimez','Bootsfahrt am Gletscher'] },
-  chalten: { name:'El Chaltén', country:'Argentinien', lat:-49.33, lon:-72.89, night:195, arrival:170, food:90, experiences:['Laguna Capri','Laguna de los Tres bei gutem Wetter','Wanderung zur Laguna Torre'] },
-  natales: { name:'Puerto Natales', country:'Chile', lat:-51.73, lon:-72.50, night:220, arrival:240, food:100, experiences:['Torres del Paine als Tagesausflug','Lago Grey','Milodón-Höhle und Uferpromenade'] },
+Object.assign(places, naturePlaces, {
+  calafate: { region:'patagonia', airport:'El Calafate', name:'El Calafate', country:'Argentinien', lat:-50.34, lon:-72.27, night:185, arrival:340, food:90, experiences:['Perito-Moreno-Gletscher','Laguna Nimez','Bootsfahrt am Gletscher'] },
+  chalten: { region:'patagonia', airport:'El Calafate', name:'El Chaltén', country:'Argentinien', lat:-49.33, lon:-72.89, night:195, arrival:170, food:90, experiences:['Laguna Capri','Laguna de los Tres bei gutem Wetter','Wanderung zur Laguna Torre'] },
+  natales: { region:'patagonia', airport:'Punta Arenas', name:'Puerto Natales', country:'Chile', lat:-51.73, lon:-72.50, night:220, arrival:240, food:100, experiences:['Torres del Paine als Tagesausflug','Lago Grey','Milodón-Höhle und Uferpromenade'] },
 });
 
 export const beachCombinations = {
@@ -79,6 +80,14 @@ export const beachCombinations = {
 };
 
 const regional = {
+  'arenas/natales': ['Bus oder Mietwagen zwischen Punta Arenas und Puerto Natales, rund 3 Std.',1,110],
+  'calafate/ushuaia': ['Saisonaler Flug El Calafate–Ushuaia oder Umstieg über Buenos Aires',1,100,360],
+  'christchurch/queenstown': ['Mietwagen über die Seenregion, etwa 6–7 Std. ohne längere Stopps',1,210],
+  'queenstown/teanau': ['Straße am Lake Wakatipu, rund 2–3 Std.',1,105],
+  'arenal/monteverde': ['Straße oder Shuttle mit Bootsabschnitt über den Arenalsee, rund 3–4 Std.',1,170],
+  'arenal/guanacaste': ['Shuttle von La Fortuna an die Pazifikküste, rund 4–5 Std.',1,220,0],
+  'guanacaste/monteverde': ['Shuttle vom Nebelwald an die Pazifikküste, rund 3–4 Std.',1,190,0],
+  'banffwinter/canmore': ['Kurze Fahrt auf dem Trans-Canada Highway, Winterbedingungen prüfen',1,85],
   'calafate/chalten': ['Bus oder Mietwagen, rund 3 Std.',1,170],
   'calafate/natales': ['Grenzbus, rund 5–7 Std. mit Grenzkontrolle',1,240],
   'chalten/natales': ['Straße über El Calafate mit Grenzkontrolle, rund 8–10 Std.',1,340],
@@ -108,8 +117,19 @@ const beachCorridors = {
   mujeres:'via Regionalhub nach Cancún, weiter mit Transfer und Fähre',
   cozumel:'via Regionalhub nach Cancún, weiter über Playa del Carmen und per Fähre',
   moorea:'über einen geeigneten Langstrecken-Hub nach Tahiti, weiter mit der Fähre',
+  fiji:'nach Nadi, weiter per Boot in die Mamanucas',
+  oahu:'nach Honolulu, ggf. Umstieg an der nordamerikanischen Westküste',
+  halfmoon:'nach San Francisco, weiter auf der Straße nach Half Moon Bay',
+  aitutaki:'über Rarotonga per Regionalflug nach Aitutaki',
   osa:'via Regionalhub nach San José, weiter per Inlandsflug oder Straße und Boot',
 };
+
+export function beachFit(region,to) {
+  if (region === 'nz') return ['fiji','aitutaki','moorea'].includes(to);
+  if (region === 'canada') return ['halfmoon','oahu','belize','caulker','mujeres','cozumel'].includes(to);
+  if (region === 'costarica') return ['guanacaste','osa','bocas','perleninseln','belize','caulker'].includes(to);
+  return !['palawan','moorea','fiji','aitutaki','oahu','halfmoon'].includes(to);
+}
 
 export function transfer(from, to, trip) {
   const key = [from, to].sort().join('/');
@@ -117,14 +137,24 @@ export function transfer(from, to, trip) {
     if (to === 'calafate') return ['Langstrecke ab Mitteleuropa via Buenos Aires, ggf. Flughafenwechsel',2,places[to].arrival];
     if (to === 'natales') return ['Langstrecke via Santiago, Anschluss über Punta Arenas oder Puerto Natales',2,places[to].arrival];
     if (to === 'chalten') return ['Langstrecke via Buenos Aires, Inlandsflug nach El Calafate und rund 3 Std. Straße',2,places[to].arrival];
+    if (places[to].region) return [`Langstrecke ab Mitteleuropa nach ${places[to].airport}, weiter zur Unterkunft in ${places[to].name}`,places[to].region === 'nz' ? 3 : 2,places[to].arrival];
     return [`Anreise ab Mitteleuropa zur Basis ${places[to].base}, ggf. mit Umstieg und Fähre`,places[to].effort >= 2 ? 2 : 1,places[to].arrival];
   }
   if (regional[key]) return regional[key];
   if (places[to].trip === 'grand') {
     if (places[from].trip === 'grand') return [`Zum Abflughafen ab ${places[from].base}, Anschluss ${beachCorridors[to]}`,places[to].effort === 3 ? 3 : 2,places[to].arrival,550];
-    const start = from === 'natales' ? 'Transfer nach Punta Arenas, Flug via Santiago' : 'Ab El Calafate über Buenos Aires mit Anschlussflug';
-    return [`${start}, ${beachCorridors[to]}`,places[to].effort === 3 ? 3 : 2,places[to].arrival];
+    const region = places[from].region;
+    const start = {
+      nz:`Ab ${places[from].airport} über Auckland`,
+      canada:'Transfer nach Calgary und Weiterflug',
+      costarica:`Straßentransfer zum Flughafen ${places[from].airport}`,
+      patagonia: ['arenas','natales'].includes(from) ? 'Über Punta Arenas und Santiago' :
+        from === 'chalten' ? 'Straße nach El Calafate, Flug über Buenos Aires' : `Ab ${places[from].airport} über Buenos Aires`,
+    }[region];
+    const fits = beachFit(region,to);
+    const duration = fits ? (['halfmoon','fiji','oahu'].includes(to) ? 1 : 2) : 3;
+    return [`${start}, ${beachCorridors[to]}`,duration,places[to].arrival,!fits && (region !== 'patagonia' || !['palawan','moorea'].includes(to)) ? 950 : 0];
   }
-  if (trip === 'grand') return ['Regional- und Inlandsflug über Santiago oder Buenos Aires, danach Straßentransfer',2,places[to].arrival];
+  if (trip === 'grand') return [`Transfer zum Flughafen ab ${places[from].base ?? places[from].airport}, Anschluss nach ${places[to].airport} und Weiterfahrt`,2,places[to].arrival,450];
   return ['Transfer zum Flughafen oder Hafen, weiter per Flug oder Fähre mit Umstieg',2,places[to].arrival];
 }

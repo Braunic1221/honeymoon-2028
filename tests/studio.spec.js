@@ -47,6 +47,10 @@ test('from first visit to preferences, ratings, editable route, budget and porta
   const adjusted = await total.innerText();
   await page.reload();
   await expect(total).toHaveText(adjusted);
+  await page.getByRole('link',{name:'Varianten',exact:true}).click();
+  await page.getByLabel('Name der Reisevariante').fill('Mini-Moon auf Madeira');
+  await page.getByRole('button',{name:'Aktuellen Plan als Variante speichern'}).click();
+  await expect(page.getByRole('article',{name:'Mini-Moon auf Madeira'})).toContainText('Funchal');
   await page.getByRole('link',{name:'Speichern',exact:true}).click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button',{name:'Planung exportieren'}).click();
@@ -57,6 +61,8 @@ test('from first visit to preferences, ratings, editable route, budget and porta
   await page.getByLabel(/JSON-Datei auswählen/).setInputFiles({name:download.suggestedFilename(),mimeType:'application/json',buffer:bytes});
   await page.getByRole('button',{name:/Importieren und aktuellen Plan ersetzen/}).click();
   await expect(page.getByText('Planung erfolgreich importiert.')).toBeVisible();
+  await page.goto('./#varianten');
+  await expect(page.getByRole('article',{name:'Mini-Moon auf Madeira'})).toContainText('Funchal');
   await page.goto('./#profil');
   await expect(page.getByRole('checkbox',{name:'Strand',exact:true})).toBeChecked();
   await expect(page.getByLabel('Hotelstandard')).toHaveValue('Luxus');
@@ -70,8 +76,10 @@ test('December suggestions create a separate Patagonia and beach itinerary',asyn
   await page.locator('[data-trip="grand"]').click();
   await expect(page.getByRole('button',{name:'Große Flitterwochen'})).toHaveAttribute('aria-pressed','true');
   await page.getByText('Wildlife',{exact:true}).click();
-  await page.getByRole('button',{name:'Passende Reiseideen ansehen'}).click();
-  await expect(page.getByText('Strandfinale nach Patagonien')).toBeVisible();
+  await page.getByRole('button',{name:'Natur-Etappe planen',exact:true}).click();
+  await expect(page.getByLabel('Wanderregion und Route')).toHaveValue('patagonia');
+  await page.getByRole('button',{name:'Weiter zur Strand-Etappe'}).click();
+  await expect(page.getByRole('heading',{name:'Etappe 2 · Strand'})).toBeVisible();
   await page.getByRole('button',{name:'Gefällt uns'}).click();
   await page.getByRole('link',{name:/Auswahl fertig/}).click();
   await page.getByRole('button',{name:'Route erstellen'}).click();
@@ -87,6 +95,10 @@ test('both trips can compare more than two favorites and resume collecting', asy
   await page.goto('./#ideen');
   for (const trip of ['Mini-Moon','Große Flitterwochen']) {
     await activate(page.getByRole('button',{name:trip,exact:true}));
+    if (trip === 'Große Flitterwochen') {
+      await activate(page.getByRole('link',{name:'Natur-Etappe planen',exact:true}));
+      await activate(page.getByRole('button',{name:'Weiter zur Strand-Etappe'}));
+    }
     const names = [];
     for (let i = 0; i < 3; i++) {
       names.push(await page.locator('#idea-title').innerText());
@@ -109,13 +121,15 @@ test('both trips can compare more than two favorites and resume collecting', asy
   }
 });
 
-test('December catalog opens with 20 ideas and supports a custom two-island itinerary', async ({page,isMobile}) => {
+test('December catalog has more than 20 ideas and supports a custom two-island itinerary', async ({page,isMobile}) => {
   const activate = locator => isMobile ? locator.tap() : locator.click();
   await page.goto('./#ideen');
   await activate(page.getByRole('button',{name:'Große Flitterwochen',exact:true}));
-  await expect(page.getByText(/20 offene Ideen/)).toBeVisible();
+  await activate(page.getByRole('link',{name:'Natur-Etappe planen',exact:true}));
+  await activate(page.getByRole('button',{name:'Weiter zur Strand-Etappe'}));
+  await expect(page.getByText(/24 offene Ideen/)).toBeVisible();
   await activate(page.getByRole('button',{name:'Nicht unser Ding – nächste Idee'}));
-  await expect(page.getByText(/19 offene Ideen/)).toBeVisible();
+  await expect(page.getByText(/23 offene Ideen/)).toBeVisible();
   await activate(page.getByRole('button',{name:'Dezemberroute selbst zusammenstellen'}));
   await expect(page.getByRole('heading',{name:/El Calafate/})).toBeVisible();
   for (const place of ['sanandres','providencia']) {
@@ -127,4 +141,45 @@ test('December catalog opens with 20 ideas and supports a custom two-island itin
   await expect(page.locator('#schedule')).toContainText('begrenztes Freigepäck');
   await page.reload();
   await expect(page.getByRole('heading',{name:'5. Providencia'})).toBeVisible();
+});
+
+test('builds and saves two December options, then reloads the first with its settings', async ({page,isMobile}) => {
+  const activate = locator => isMobile ? locator.tap() : locator.click();
+  await page.goto('./#profil');
+  await activate(page.getByRole('button',{name:'Große Flitterwochen',exact:true}));
+  await activate(page.getByRole('button',{name:'Natur-Etappe planen',exact:true}));
+  await page.getByLabel('Tage für die gesamte Reise').fill('23');
+  await page.getByLabel('Nächte in El Chaltén').fill('4');
+  await activate(page.getByText('Bootsfahrt am Gletscher',{exact:true}));
+  await activate(page.getByRole('button',{name:'Weiter zur Strand-Etappe'}));
+  await activate(page.getByText('Strandziel direkt auswählen',{exact:true}));
+  await page.getByRole('combobox',{name:'Strandziel',exact:true}).selectOption('belize');
+  await activate(page.getByRole('button',{name:'Gesamtroute für dieses Ziel erstellen'}));
+  await expect(page.locator('#route-summary')).toContainText('23 Tage insgesamt');
+  await expect(page.getByLabel('Nächte an Stopp 2')).toHaveValue('4');
+  await expect(page.getByLabel(/Aktivitäten an Stopp 1/)).not.toHaveValue(/Bootsfahrt am Gletscher/);
+  await activate(page.getByRole('link',{name:'Als Variante speichern'}));
+  await page.getByLabel('Name der Reisevariante').fill('Patagonien & Belize');
+  await activate(page.getByRole('button',{name:'Aktuellen Plan als Variante speichern'}));
+  const first = page.getByRole('article',{name:'Patagonien & Belize'});
+  await expect(first).toContainText('23 Tage');
+  await expect(first).toContainText('San Pedro');
+  await expect(first).toContainText('€');
+  await activate(page.getByRole('button',{name:'Neue Beratung starten'}));
+  await activate(page.getByRole('button',{name:'Natur-Etappe planen',exact:true}));
+  await page.getByLabel('Wanderregion und Route').selectOption('canada');
+  await expect(page.getByText(/gefrorene Seen/)).toBeVisible();
+  await activate(page.getByRole('button',{name:'Weiter zur Strand-Etappe'}));
+  await activate(page.getByText('Strandziel direkt auswählen',{exact:true}));
+  await page.getByRole('combobox',{name:'Strandziel',exact:true}).selectOption('halfmoon');
+  await activate(page.getByRole('button',{name:'Gesamtroute für dieses Ziel erstellen'}));
+  await expect(page.locator('#schedule')).toContainText('Calgary');
+  await activate(page.getByRole('link',{name:'Als Variante speichern'}));
+  await page.getByLabel('Name der Reisevariante').fill('Kanada & Kalifornien');
+  await activate(page.getByRole('button',{name:'Aktuellen Plan als Variante speichern'}));
+  await page.reload();
+  await expect(page.getByRole('article',{name:'Kanada & Kalifornien'})).toContainText('Half Moon Bay');
+  await activate(first.getByRole('button',{name:'Variante laden'}));
+  await expect(page.locator('#route-summary')).toContainText('23 Tage insgesamt');
+  await expect(page.getByRole('heading',{name:/San Pedro/})).toBeVisible();
 });

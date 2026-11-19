@@ -1,4 +1,5 @@
-import { activities, beachCombinations, destinations, hotels, interests, places, transfer, trips } from './catalog.js';
+import { activities, beachCombinations, beachFit, destinations, hotels, interests, places, transfer, trips } from './catalog.js';
+import { naturePresets } from './nature.js';
 
 export const labels = { flights:'Flüge', lodging:'Unterkünfte', transfers:'Transfers', activities:'Aktivitäten', food:'Verpflegung', reserve:'Reserve' };
 export const defaults = { flights:100, lodging:100, transfers:100, activities:100, food:100, reserve:12 };
@@ -9,9 +10,10 @@ export function blankPlan() {
   return {
     version: 1,
     active: 'mini',
+    variants: {mini:[], grand:[]},
     trips: Object.fromEntries(routes.map(key => [key, {
       profile: { interests:[], activities:[], hotel:'Boutique', budget:trips[key].budget, pace:'Ausgewogen', changes:key === 'mini' ? 1 : 3, must:'', avoid:'' },
-      rejected:[], favorites:[], stops:[], start:trips[key].start, rates:{...defaults},
+      rejected:[], favorites:[], stops:[], start:trips[key].start, rates:{...defaults}, adventure:null,
     }])),
   };
 }
@@ -22,34 +24,62 @@ const strings = (value, allowed) => Array.isArray(value) && value.length <= allo
 const short = value => typeof value === 'string' && value.length <= 500;
 export const allowedPlaces = key => Object.keys(places).filter(id => !places[id].trip ? key === 'grand' : places[id].trip === key);
 
+function validStops(stops,key,allowed = allowedPlaces(key)) {
+  return Array.isArray(stops) && stops.length <= 9 && stops.every(stop =>
+    allowed.includes(stop?.place) && integer(stop.nights,1,30) &&
+    Array.isArray(stop.activities) && stop.activities.length <= 12 && stop.activities.every(short));
+}
+
+function copyStops(stops) {
+  return stops.map(({place,nights,activities}) => ({place,nights,activities:[...activities]}));
+}
+
+function cleanEntry(key,entry) {
+  const profile = entry?.profile;
+  const ideas = destinations.filter(idea => idea.trip === key).map(idea => idea.id);
+  const date = /^2028-\d{2}-\d{2}$/.test(entry?.start) ? new Date(entry.start + 'T12:00:00Z') : null;
+  if (!profile || !strings(profile.interests,interests) || !strings(profile.activities,activities) ||
+    !hotels.includes(profile.hotel) || !integer(profile.budget,0,100000) || !integer(profile.changes,0,8) ||
+    !['Entspannt','Ausgewogen','Aktiv'].includes(profile.pace) || !short(profile.must) || !short(profile.avoid) ||
+    !strings(entry.rejected,ideas) || !strings(entry.favorites,ideas) || entry.favorites.some(id => entry.rejected.includes(id)) ||
+    !date || Number.isNaN(+date) || date.toISOString().slice(0,10) !== entry.start ||
+    !Object.entries(defaults).every(([label]) => integer(entry.rates?.[label],0,label === 'reserve' ? 100 : 300)) ||
+    !validStops(entry.stops,key)) {
+    throw new Error('Die Datei enthält ungültige Planungsdaten.');
+  }
+  const adventure = entry.adventure ?? null;
+  if (adventure && (key !== 'grand' || !Object.hasOwn(naturePresets,adventure.preset) ||
+    !integer(adventure.target,20,25) ||
+    !validStops(adventure.stops,key,naturePresets[adventure.preset].route.map(([id]) => id)) ||
+    !adventure.stops.length || adventure.stops.reduce((sum,stop) => sum + stop.nights,0) > 15 ||
+    new Set(adventure.stops.map(stop => stop.place)).size !== adventure.stops.length)) {
+    throw new Error('Die Datei enthält eine ungültige Natur-Etappe.');
+  }
+  return {
+    profile: { interests:profile.interests,activities:profile.activities,hotel:profile.hotel,budget:profile.budget,
+      pace:profile.pace,changes:profile.changes,must:profile.must,avoid:profile.avoid },
+    rejected:entry.rejected,favorites:entry.favorites,start:entry.start,
+    stops:copyStops(entry.stops),
+    adventure:adventure ? {preset:adventure.preset,target:adventure.target,stops:copyStops(adventure.stops)} : null,
+    rates:Object.fromEntries(Object.keys(defaults).map(label => [label,entry.rates[label]])),
+  };
+}
+
 export function readPlan(raw) {
   const data = JSON.parse(raw);
   if (data?.version !== 1 || !routes.includes(data.active)) throw new Error('Unbekanntes Dateiformat.');
   const clean = blankPlan();
   clean.active = data.active;
   for (const key of routes) {
-    const entry = data.trips?.[key];
-    const profile = entry?.profile;
-    const ideas = destinations.filter(idea => idea.trip === key).map(idea => idea.id);
-    const date = /^2028-\d{2}-\d{2}$/.test(entry?.start) ? new Date(entry.start + 'T12:00:00Z') : null;
-    if (!profile || !strings(profile.interests,interests) || !strings(profile.activities,activities) ||
-      !hotels.includes(profile.hotel) || !integer(profile.budget,0,100000) || !integer(profile.changes,0,8) ||
-      !['Entspannt','Ausgewogen','Aktiv'].includes(profile.pace) || !short(profile.must) || !short(profile.avoid) ||
-      !strings(entry.rejected,ideas) || !strings(entry.favorites,ideas) || entry.favorites.some(id => entry.rejected.includes(id)) ||
-      !date || Number.isNaN(+date) || date.toISOString().slice(0,10) !== entry.start ||
-      !Object.entries(defaults).every(([label]) => integer(entry.rates?.[label],0,label === 'reserve' ? 100 : 300)) ||
-      !Array.isArray(entry.stops) || entry.stops.length > 9 || !entry.stops.every(stop =>
-        allowedPlaces(key).includes(stop?.place) && integer(stop.nights,1,30) &&
-        Array.isArray(stop.activities) && stop.activities.length <= 12 && stop.activities.every(short))) {
-      throw new Error('Die Datei enthält ungültige Planungsdaten.');
-    }
-    clean.trips[key] = {
-      profile: { interests:profile.interests,activities:profile.activities,hotel:profile.hotel,budget:profile.budget,
-        pace:profile.pace,changes:profile.changes,must:profile.must,avoid:profile.avoid },
-      rejected:entry.rejected,favorites:entry.favorites,start:entry.start,
-      stops:entry.stops.map(({place,nights,activities}) => ({place,nights,activities})),
-      rates:Object.fromEntries(Object.keys(defaults).map(label => [label,entry.rates[label]])),
-    };
+    clean.trips[key] = cleanEntry(key,data.trips?.[key]);
+    const variants = data.variants?.[key] ?? [];
+    if (!Array.isArray(variants)) throw new Error('Die Datei enthält ungültige Reisevarianten.');
+    clean.variants[key] = variants.map(item => {
+      if (typeof item?.name !== 'string' || !item.name.trim() || item.name.length > 80) throw new Error('Ungültiger Name einer Reisevariante.');
+      const trip = cleanEntry(key,item.trip);
+      if (!trip.stops.length) throw new Error('Eine Reisevariante enthält keine Stopps.');
+      return {name:item.name,trip};
+    });
   }
   return clean;
 }
@@ -63,9 +93,22 @@ export function patagoniaRoute(profile, beachStops = 1) {
     : [makeStop('calafate',5),makeStop('natales',4)];
 }
 
-export function starterRoute(key, idea, profile) {
+export function makeAdventure(preset,target = 22) {
+  return {preset,target,stops:naturePresets[preset].route.map(([id,nights]) => makeStop(id,nights))};
+}
+
+export function starterRoute(key, idea, profile, adventure = null) {
   if (key === 'mini') return [makeStop(idea, trips.mini.days - (places[idea].effort >= 2 ? 3 : 1))];
   const beaches = beachCombinations[idea] ?? [idea];
+  if (adventure) {
+    const stops = [...copyStops(adventure.stops),...beaches.map(place => makeStop(place,1))];
+    const minimumDays = calendar(key,{stops,start:trips.grand.start}).length;
+    const spare = Math.max(0,adventure.target - minimumDays);
+    beaches.forEach((_,index) => {
+      stops[adventure.stops.length + index].nights += Math.floor(spare / beaches.length) + (index < spare % beaches.length ? 1 : 0);
+    });
+    return stops;
+  }
   const nights = places[beaches[0]].effort === 3 ? 7 : 8;
   return [...patagoniaRoute(profile,beaches.length),...beaches.map(place => makeStop(place,nights/beaches.length))];
 }
@@ -135,17 +178,20 @@ function evaluate(key,entry,candidates,withAffinity) {
     const must = terms(p.must);
     const avoid = terms(p.avoid);
     const hotel = d.styles.includes(p.hotel);
-    const draft = {...entry,stops:starterRoute(key,d.id,p)};
+    const draft = {...entry,stops:starterRoute(key,d.id,p,entry.adventure)};
     const total = estimate(key,draft).total;
     const budget = !p.budget || total <= p.budget;
     const affinity = (withAffinity ? [...entry.favorites,...entry.rejected] : []).reduce((sum,id) => {
       const overlap = d.tags.filter(tag => places[id].tags.includes(tag) && !p.interests.includes(tag)).length;
       return sum + overlap * (entry.favorites.includes(id) ? 2 : -1);
     },0);
+    const origin = entry.adventure?.stops.at(-1);
+    const regionBonus = origin ? (beachFit(places[origin.place].region,(beachCombinations[d.id] ?? [d.id])[0]) ? 23 : -10) : 0;
+    const beachNights = key === 'grand' ? draft.stops.filter(stop => places[stop.place].trip === 'grand').reduce((sum,stop) => sum+stop.nights,0) : 0;
     const score = 10 * d.season + 7 * matches.length + (hotel ? 8 : 0) + 5 * must.length - 12 * avoid.length +
       (budget ? 7 : -Math.min(18,(total-p.budget)/500)) - (p.pace === 'Entspannt' ? 10 : 5) * d.effort +
-      (key === 'grand' && p.changes < 3 && d.effort > 1 ? -8 : 0) + Math.max(-10,Math.min(10,affinity));
-    return {d,score,matches,hotel,must,avoid,total,budget,days:calendar(key,draft).length,changes:draft.stops.length - 1, itinerary:draft.stops.map(stop => places[stop.place].base ?? places[stop.place].name)};
+      (key === 'grand' && p.changes < 3 && d.effort > 1 ? -8 : 0) + Math.max(-10,Math.min(10,affinity)) + regionBonus - (beachNights && beachNights < 5 ? 14 : 0);
+    return {d,score,matches,hotel,must,avoid,total,budget,beachNights,days:calendar(key,draft).length,changes:draft.stops.length - 1, itinerary:draft.stops.map(stop => places[stop.place].base ?? places[stop.place].name)};
   }).sort((a,b) => b.score - a.score || a.d.name.localeCompare(b.d.name,'de'));
 }
 
