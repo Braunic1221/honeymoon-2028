@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blankPlan, calendar, compareFavorites, estimate, rank, readPlan, starterRoute } from '../model.js';
+import { blankPlan, calendar, compareFavorites, estimate, makeAdventure, rank, readPlan, starterRoute } from '../model.js';
 
 test('matching responds to profile, exclusions, remembered choices and budget', () => {
   const p = blankPlan().trips.mini;
@@ -99,4 +99,42 @@ test('two-island starters keep both Patagonia countries and account for the loca
     entry.stops.at(-1).nights++;
     assert.ok(estimate('grand',entry).total > original);
   }
+});
+
+test('nature and beach share one calendar and budget, including regional alternatives', () => {
+  const entry = blankPlan().trips.grand;
+  for (const [preset,beach,target,last] of [
+    ['patagonia','belize',23,'belize'],
+    ['costarica','guanacaste',20,'guanacaste'],
+    ['canada','halfmoon',22,'halfmoon'],
+    ['nz','fiji',25,'fiji'],
+  ]) {
+    entry.adventure = makeAdventure(preset,target);
+    entry.adventure.stops[0].activities = [];
+    entry.stops = starterRoute('grand',beach,entry.profile,entry.adventure);
+    assert.deepEqual(entry.stops[0],entry.adventure.stops[0]);
+    assert.equal(entry.stops.at(-1).place,last);
+    assert.equal(calendar('grand',entry).length,target);
+    assert.ok(estimate('grand',entry).total > 4000);
+    assert.notEqual(entry.stops[0].activities,entry.adventure.stops[0].activities);
+  }
+});
+
+test('legacy data and independent named trip snapshots round-trip', () => {
+  const legacy = blankPlan();
+  delete legacy.variants;
+  for (const entry of Object.values(legacy.trips)) delete entry.adventure;
+  const plan = readPlan(JSON.stringify(legacy));
+  const grand = plan.trips.grand;
+  grand.adventure = makeAdventure('chile',24);
+  grand.stops = starterRoute('grand','belize',grand.profile,grand.adventure);
+  plan.variants.grand.push({name:'Chile und Belize',trip:structuredClone(grand)});
+  const mini = plan.trips.mini;
+  mini.stops = starterRoute('mini','madeira',mini.profile);
+  plan.variants.mini.push({name:'Madeira',trip:structuredClone(mini)});
+  grand.stops[0].nights += 2;
+  grand.rates.lodging = 50;
+  assert.deepEqual(readPlan(JSON.stringify(plan)),plan);
+  assert.equal(plan.variants.grand[0].trip.rates.lodging,100);
+  assert.notEqual(plan.variants.grand[0].trip.stops[0].nights,grand.stops[0].nights);
 });

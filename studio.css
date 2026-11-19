@@ -118,3 +118,6 @@ legend{font-weight:700;margin-bottom:8px}
 .comparison-copy dt{font-weight:700;border-top:1px solid var(--line);padding-top:8px}
 .comparison-copy dd{margin:0 0 8px;color:var(--muted)}
 .comparison-copy>div:last-child{margin-top:auto}
+
+#beach-form{margin-top:14px}
+details>summary{cursor:pointer;min-height:44px;align-content:center;font-weight:700}

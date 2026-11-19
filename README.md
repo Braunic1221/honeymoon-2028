@@ -1,6 +1,6 @@
 # The Honeymoon Studio 2028 · Tamara & Marvin
 
-Ein persönliches Reisestudio für den Mini-Moon ab 21. Juni 2028 und die großen Flitterwochen in Patagonien mit anschließendem Strandurlaub im Dezember 2028.
+Ein persönliches Reisestudio für den Mini-Moon ab 21. Juni 2028 und die großen Flitterwochen mit Wander- und Strand-Etappe im Dezember 2028.
 
 ## Lokal öffnen
 
@@ -14,9 +14,10 @@ Dann [das Studio öffnen](http://127.0.0.1:4173/honeymoon-2028/).
 
 ## So plant ihr
 
-- Erstellt ein separates Reiseprofil für jede Reise. Das Studio bewertet 20 Reiseideen pro Reise anhand der Reisesaison, der Interessen und Aktivitäten, des Hotelstils, eurer Wunsch- und Ausschlussstichwörter, des Zielbudgets und des Reiseaufwands. Frühere Bewertungen beeinflussen die Reihenfolge. Abgelehnte Ideen bleiben ausgeblendet, bis ihr sie ausdrücklich wieder zulasst.
-- Sammelt beliebig viele Favoriten aus dem Zielkatalog pro Reise. Startet den Vergleich, wenn eure Auswahl steht, und nutzt einen Favoriten für die Startroute. Die Dezemberideen verbinden Argentinien und Chile mit einer tropischen Basis oder einer Inselkombination. Wenn ihr die Route selbst zusammenstellt, startet ihr mit Patagonien und ergänzt tropische Aufenthalte im Routenplan. Tagesausflüge per Boot ermöglichen Inselhopping mit wenigen Unterkunftswechseln. Ändert Datum, Aufenthaltsdauer, Aktivitäten und Reihenfolge. Karte und Tagesplan übernehmen die neue Route.
+- Erstellt ein separates Reiseprofil für jede Reise. Das Studio bewertet mindestens 20 Reiseideen pro Reise anhand der Reisesaison, der Interessen und Aktivitäten, des Hotelstils, eurer Wunsch- und Ausschlussstichwörter, des Zielbudgets und des Reiseaufwands. Frühere Bewertungen beeinflussen die Reihenfolge. Abgelehnte Ideen bleiben ausgeblendet, bis ihr sie ausdrücklich wieder zulasst.
+- Sammelt beliebig viele Favoriten aus dem Zielkatalog pro Reise. Startet den Vergleich, wenn eure Auswahl steht, und nutzt einen Favoriten für die Startroute. Plant den Dezember in zwei Etappen. Wählt zuerst eine Route in Patagonien oder eine Alternative und passt die Naturstopps, Nächte und Aktivitäten an. Strandvorschläge werden für eure Natur-Etappe und eine Gesamtreise von 20–25 Tagen einschließlich Transfers berechnet. Tagesausflüge per Boot ermöglichen Inselhopping mit wenigen Unterkunftswechseln. Ändert Datum, Aufenthaltsdauer, Aktivitäten und Reihenfolge. Karte und Tagesplan übernehmen die neue Route.
 - Passt die Modellkosten für Flüge, Übernachtungen, Transfers, Aktivitäten und Essen sowie den Reserveprozentsatz an. Der Rechner aktualisiert Reisekosten und Gesamtsumme für zwei. Die Kosten sind Schätzungen in Euro für 2028 mit Abflug ab Mitteleuropa. Transferkorridore und saisonale Hinweise dienen der Planung. Flugpläne, Abfahrtszeiten und Wetter sollten vor der Buchung geprüft werden.
+- Speichert unter **Varianten** je Reise mehrere benannte Stände mit Route, Profil und Budgetansätzen. Startet danach eine neue Beratung oder ladet eine Variante zur Weiterbearbeitung.
 - Der aktuelle Plan liegt im lokalen Browserspeicher. Exportiert ihn als JSON für Backups oder den Gerätewechsel. Ein erfolgreicher Import ersetzt die Planung für beide Reisen.
 
 ## Tests
