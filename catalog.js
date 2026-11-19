@@ -1,3 +1,5 @@
+import { moreIdeas } from './catalog-more.js';
+
 export const trips = {
   mini: { name: 'Mini-Moon', start: '2028-06-21', days: 9, duration: '7–10 Tage', budget: 5000 },
   grand: { name: 'Große Flitterwochen', start: '2028-12-12', days: 21, duration: 'ca. 21 Tage', budget: 14000 },
@@ -58,7 +60,7 @@ const ideas = [
     'Von El Nido aus sind mehrere Inselgruppen als Tagestrips möglich.','Sehr langer Wechsel aus Patagonien mit mehreren Flugsegmenten und möglichem Datumswechsel.','Im Dezember oft trockener. Stürme und wetterbedingte Ausfälle bleiben möglich.','Bacuit-Lagunen per Boot|Schnorcheln bei ruhiger See|Nacpan Beach'],
 ];
 
-export const destinations = ideas.map(([id,name,country,trip,base,lat,lon,flights,night,arrival,food,season,effort,tags,sports,styles,description,pro,con,weather,experiences]) => ({
+export const destinations = [...ideas,...moreIdeas].map(([id,name,country,trip,base,lat,lon,flights,night,arrival,food,season,effort,tags,sports,styles,description,pro,con,weather,experiences]) => ({
   id,name,country,trip,base,lat,lon,flights,night,arrival,food,season,effort,tags,sports,styles,description,pro,con,weather,experiences:experiences.split('|'),image:`./media/${id}.webp`,
 }));
 
@@ -69,13 +71,48 @@ Object.assign(places, {
   natales: { name:'Puerto Natales', country:'Chile', lat:-51.73, lon:-72.50, night:220, arrival:240, food:100, experiences:['Torres del Paine als Tagesausflug','Lago Grey','Milodón-Höhle und Uferpromenade'] },
 });
 
+export const beachCombinations = {
+  bonaire: ['bonaire','curacao'],
+  providencia: ['sanandres','providencia'],
+  caulker: ['belize','caulker'],
+  cozumel: ['mujeres','cozumel'],
+};
+
+const regional = {
+  'calafate/chalten': ['Bus oder Mietwagen, rund 3 Std.',1,170],
+  'calafate/natales': ['Grenzbus, rund 5–7 Std. mit Grenzkontrolle',1,240],
+  'chalten/natales': ['Straße über El Calafate mit Grenzkontrolle, rund 8–10 Std.',1,340],
+  'bonaire/curacao': ['Regionalflug zwischen Bonaire und Curaçao, Flughafentransfers einplanen',1,80,300],
+  'providencia/sanandres': ['Kurzer Regionalflug zwischen San Andrés und Providencia, begrenztes Freigepäck',1,60,230],
+  'belize/caulker': ['Zwischen San Pedro und Caye Caulker per Wassertaxi, rund 30 Min. auf dem Wasser',1,80,0],
+  'cozumel/mujeres': ['Fähre über Cancún, Straße nach Playa del Carmen, zweite Fähre nach Cozumel',1,155,0],
+};
+
+const beachCorridors = {
+  bocas:'über Panama-Stadt, ggf. Flughafenwechsel und Inlandsflug',
+  belize:'über einen Mittelamerika-Hub nach Belize City, weiter per Wassertaxi',
+  rosario:'via Bogotá nach Cartagena, weiter per Boot',
+  guanacaste:'über einen Regionalhub nach Liberia oder San José, weiter auf der Straße',
+  curacao:'über Panama-Stadt oder Bogotá nach Willemstad, weiter auf der Straße',
+  palawan:'über einen Langstrecken-Hub und Manila nach El Nido',
+  aruba:'über Bogotá oder Panama-Stadt nach Oranjestad, weiter auf der Straße',
+  bonaire:'über einen Karibik-Hub, ggf. mit Regionalflug ab Curaçao',
+  sanandres:'via Bogotá nach San Andrés',
+  providencia:'via Bogotá und San Andrés, dann per Regionalflug',
+  perleninseln:'nach Panama-Stadt, weiter per Fähre nach Contadora',
+  bayahibe:'via Regionalhub nach Santo Domingo oder Punta Cana, weiter auf der Straße',
+  tobago:'über Port of Spain, ggf. mit Regionalflug nach Tobago und Straßentransfer',
+  barbados:'über einen Karibik- oder Nordamerika-Hub nach Bridgetown, weiter auf der Straße',
+  roatan:'über einen Mittelamerika-Hub nach Roatán, weiter nach West Bay',
+  caulker:'über einen Mittelamerika-Hub nach Belize City, weiter per Wassertaxi',
+  mujeres:'via Regionalhub nach Cancún, weiter mit Transfer und Fähre',
+  cozumel:'via Regionalhub nach Cancún, weiter über Playa del Carmen und per Fähre',
+  moorea:'über einen geeigneten Langstrecken-Hub nach Tahiti, weiter mit der Fähre',
+  osa:'via Regionalhub nach San José, weiter per Inlandsflug oder Straße und Boot',
+};
+
 export function transfer(from, to, trip) {
   const key = [from, to].sort().join('/');
-  const regional = {
-    'calafate/chalten': ['Bus oder Mietwagen, rund 3 Std.',1,170],
-    'calafate/natales': ['Grenzbus, rund 5–7 Std. mit Grenzkontrolle',1,240],
-    'chalten/natales': ['Straße über El Calafate mit Grenzkontrolle, rund 8–10 Std.',1,340],
-  };
   if (!from) {
     if (to === 'calafate') return ['Langstrecke ab Mitteleuropa via Buenos Aires, ggf. Flughafenwechsel',2,places[to].arrival];
     if (to === 'natales') return ['Langstrecke via Santiago, Anschluss über Punta Arenas oder Puerto Natales',2,places[to].arrival];
@@ -83,18 +120,10 @@ export function transfer(from, to, trip) {
     return [`Anreise ab Mitteleuropa zur Basis ${places[to].base}, ggf. mit Umstieg und Fähre`,places[to].effort >= 2 ? 2 : 1,places[to].arrival];
   }
   if (regional[key]) return regional[key];
-  if (destinations.some(idea => idea.id === to && idea.trip === 'grand')) {
-    const start = from === 'natales' ? 'Transfer nach Punta Arenas, Flug via Santiago' :
-      (from === 'calafate' || from === 'chalten') ? 'Über El Calafate und Buenos Aires mit Anschlussflug' : 'Regionalflug mit Umstieg';
-    const corridors = {
-      bocas:'über Panama-Stadt, ggf. Flughafenwechsel und Inlandsflug',
-      belize:'über einen Mittelamerika-Hub nach Belize City, weiter per Wassertaxi',
-      rosario:'via Bogotá nach Cartagena, weiter per Boot',
-      guanacaste:'über einen Regionalhub nach Liberia oder San José, weiter auf der Straße',
-      curacao:'über Panama-Stadt oder Bogotá nach Willemstad, weiter auf der Straße',
-      palawan:'über einen Langstrecken-Hub und Manila nach El Nido',
-    };
-    return [`${start}, ${corridors[to]}`, to === 'palawan' ? 3 : 2, places[to].arrival];
+  if (places[to].trip === 'grand') {
+    if (places[from].trip === 'grand') return [`Zum Abflughafen ab ${places[from].base}, Anschluss ${beachCorridors[to]}`,places[to].effort === 3 ? 3 : 2,places[to].arrival,550];
+    const start = from === 'natales' ? 'Transfer nach Punta Arenas, Flug via Santiago' : 'Ab El Calafate über Buenos Aires mit Anschlussflug';
+    return [`${start}, ${beachCorridors[to]}`,places[to].effort === 3 ? 3 : 2,places[to].arrival];
   }
   if (trip === 'grand') return ['Regional- und Inlandsflug über Santiago oder Buenos Aires, danach Straßentransfer',2,places[to].arrival];
   return ['Transfer zum Flughafen oder Hafen, weiter per Flug oder Fähre mit Umstieg',2,places[to].arrival];
