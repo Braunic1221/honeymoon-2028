@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blankPlan, calendar, estimate, rank, readPlan, starterRoute } from '../model.js';
+import { blankPlan, calendar, compareFavorites, estimate, rank, readPlan, starterRoute } from '../model.js';
 
 test('matching responds to profile, exclusions, remembered choices and budget', () => {
   const p = blankPlan().trips.mini;
@@ -50,4 +50,20 @@ test('valid imports round trip and reject invalid dates, stops and rates', () =>
     change(copy);
     assert.throws(() => readPlan(JSON.stringify(copy)));
   }
+});
+
+test('every catalog idea can be saved and compared for either trip', () => {
+  const plan = blankPlan();
+  for (const key of ['mini','grand']) {
+    const entry = plan.trips[key];
+    const candidates = rank(key,entry);
+    entry.favorites = candidates.map(item => item.d.id);
+    assert.ok(entry.favorites.length > 2);
+    assert.deepEqual(rank(key,entry),[]);
+    const comparison = compareFavorites(key,entry);
+    assert.equal(comparison.length,entry.favorites.length);
+    assert.ok(comparison.every((item,i) => i === 0 || item.score <= comparison[i-1].score));
+    assert.ok(comparison.every(item => item.total > 0 && item.days > 0));
+  }
+  assert.deepEqual(readPlan(JSON.stringify(plan)),plan);
 });
