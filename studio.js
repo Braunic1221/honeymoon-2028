@@ -1,5 +1,5 @@
 import { activities, hotels, interests, places, trips } from './catalog.js';
-import { allowedPlaces, blankPlan, calendar, compareFavorites, estimate, euro, labels, makeStop, rank, readPlan, routes, starterRoute } from './model.js';
+import { allowedPlaces, blankPlan, calendar, compareFavorites, estimate, euro, labels, makeStop, patagoniaRoute, rank, readPlan, routes, starterRoute } from './model.js';
 import { routeMap } from './map.js';
 
 const storageKey = 'honeymoon-studio-2028';
@@ -61,13 +61,16 @@ function profile(entry) {
 }
 
 function ideas(entry) {
-  const top = rank(plan.active,entry)[0];
+  const remaining = rank(plan.active,entry);
+  const [top] = remaining;
+  const ownRoute = plan.active === 'grand' && !entry.stops.length ?
+    '<p><button class="button secondary" data-action="custom-grand">Dezemberroute selbst zusammenstellen</button></p>' : '';
   const summary = entry.favorites.length ? `<section class="panel favorite-summary">
     <div><h3>Eure Favoriten · ${entry.favorites.length}</h3><p class="muted">${entry.favorites.map(id => places[id].name).join(' · ')}</p></div>
     <a class="button" href="#vergleich">Auswahl fertig – Favoriten vergleichen <span class="arrow" aria-hidden="true"></span></a>
   </section>` : '';
-  if (!top) return `${summary}<section class="panel"><p>Ihr habt alle Vorschläge bewertet.</p>${entry.rejected.length ? '<button class="button secondary" data-action="reset-rejections">Abgelehnte Ideen erneut zulassen</button>' : ''}</section>`;
-  const {d,matches,must,avoid,hotel,budget,total} = top;
+  if (!top) return `${summary}${ownRoute}<section class="panel"><p>Ihr habt alle Vorschläge bewertet.</p>${entry.rejected.length ? '<button class="button secondary" data-action="reset-rejections">Abgelehnte Ideen erneut zulassen</button>' : ''}</section>`;
+  const {d,matches,must,avoid,hotel,budget,total,days,itinerary} = top;
   const why = [
     matches.length ? `Passt zu ${matches.join(', ')}.` : 'Nach Reisezeit und Aufwand priorisiert.',
     hotel ? `${entry.profile.hotel} passt zum Unterkunftsangebot.` : '',
@@ -76,10 +79,12 @@ function ideas(entry) {
     avoid.length ? `Möglicher Konflikt mit euren Angaben: ${avoid.join(', ')}.` : '',
     entry.rejected.length || entry.favorites.length ? 'Eure bisherigen Bewertungen fließen in die Reihenfolge ein.' : '',
   ].filter(Boolean).join(' ');
-  return `${summary}<article class="panel recommendation">
+  return `${summary}${ownRoute}<article class="panel recommendation">
     <figure><img src="${d.image}" alt="Landschaftsinspiration für ${d.name}" width="500" height="500"><figcaption>KI-Illustration · ${d.country}</figcaption></figure>
     <div class="rec-copy"><span class="token">${plan.active === 'grand' ? 'Strandfinale nach Patagonien' : d.country}</span>
       <h3 tabindex="-1" id="idea-title">${d.name}</h3>
+      <p class="muted">${remaining.length} ${remaining.length === 1 ? 'offene Idee' : 'offene Ideen'} einschließlich dieser</p>
+      ${plan.active === 'grand' ? `<p><strong>Route (${days} Tage)</strong> · ${itinerary.join(' → ')}</p>` : ''}
       <p>${d.description}</p><p><strong>Dafür spricht</strong> · ${d.pro}</p><p><strong>Gut zu wissen</strong> · ${d.con}</p>
       <p><strong>Reisezeit</strong> · ${d.weather}</p><p><strong>Aktivitäten</strong> · ${d.experiences.join(' · ')}</p>
       <p><strong>${euro(total)}</strong> · Geschätzte Gesamtreise für zwei, einschließlich Reserve (2028)</p>
@@ -93,7 +98,7 @@ function comparison(entry) {
   if (!favorites.length) return '<section class="panel"><p>Wählt zuerst einen Favoriten für diese Reise.</p><a class="button" href="#ideen">Zu den Reiseideen</a></section>';
   const cheapest = Math.min(...favorites.map(item => item.total));
   return `<p class="notice">Die Reihenfolge folgt eurem Profil. Klima, Budget, Interessen, Hotelwunsch und Reiseaufwand fließen in die Bewertung ein. Die Preise sind Schätzungen für zwei Personen inklusive Reserve für 2028.${plan.active === 'grand' ? ' Jeder Vorschlag enthält die gesamte Reise mit Patagonien.' : ''}</p>
-    <div class="comparison-grid">${favorites.map(({d,score,matches,hotel,must,avoid,total,budget,days,changes}) => `<article class="panel comparison-card" aria-labelledby="compare-${d.id}">
+    <div class="comparison-grid">${favorites.map(({d,score,matches,hotel,must,avoid,total,budget,days,changes,itinerary}) => `<article class="panel comparison-card" aria-labelledby="compare-${d.id}">
       <img src="${d.image}" alt="Landschaftsinspiration für ${d.name}" width="500" height="500" loading="lazy">
       <div class="comparison-copy">
         <p class="eyebrow">KI-ILLUSTRATION · ${d.country}</p><h3 id="compare-${d.id}">${d.name}</h3>
@@ -102,7 +107,7 @@ function comparison(entry) {
         <dl>
           <dt>Budget</dt><dd>${entry.profile.budget ? (budget ? 'Im Zielbudget' : `${euro(total-entry.profile.budget)} über Zielbudget`) : 'Zielbudget offen'}</dd>
           <dt>Profilpassung</dt><dd>${matches.length ? matches.join(', ') : 'Keine direkte Übereinstimmung mit euren ausgewählten Interessen'} · ${hotel ? 'Hotelwunsch passt' : 'Andere Hotelstile im Fokus'}${must.length ? ` · Wünsche: ${escape(must.join(', '))}` : ''}${avoid.length ? ` · Möglicher Konflikt: ${escape(avoid.join(', '))}` : ''}</dd>
-          <dt>Reiseverlauf</dt><dd>${days} Tage · ${changes} Unterkunftswechsel · Basis: ${d.base}</dd>
+          <dt>Reiseverlauf</dt><dd>${days} Tage · ${changes} Unterkunftswechsel · ${itinerary.join(' → ')}</dd>
           <dt>Reisezeit</dt><dd>${d.weather}</dd>
           <dt>Aktivitäten</dt><dd>${d.experiences.join(' · ')}</dd>
           <dt>Dafür spricht</dt><dd>${d.pro}</dd>
@@ -126,7 +131,7 @@ function timeline(entry) {
 }
 
 function route(entry) {
-  if (!entry.stops.length) return '<section class="panel"><p>Sammelt unter Reiseideen Favoriten und erstellt im Vergleich eure Route.</p><a class="button" href="#ideen">Zu den Reiseideen</a></section>';
+  if (!entry.stops.length) return `<section class="panel"><p>Sammelt unter Reiseideen Favoriten und erstellt im Vergleich eure Route.</p><div class="actions"><a class="button" href="#ideen">Zu den Reiseideen</a>${plan.active === 'grand' ? '<button class="button secondary" data-action="custom-grand">Dezemberroute selbst zusammenstellen</button>' : ''}</div></section>`;
   const changes = entry.stops.length - 1;
   return `<div class="two">
     <section class="panel"><h3>Eure Stopps</h3><p class="muted" id="route-summary">${routeSummary(entry)}</p>
@@ -143,7 +148,7 @@ function route(entry) {
       <label class="field">Nächte an Stopp ${i+1}<input type="number" min="1" max="30" required value="${stop.nights}" data-change="nights" data-index="${i}"></label>
       <label class="field">Aktivitäten an Stopp ${i+1} · bis zu 12, eine pro Zeile<textarea rows="3" maxlength="6000" data-change="activities" data-index="${i}">${escape(stop.activities.join('\n'))}</textarea></label>
     </section>`).join('')}</div>
-    <form id="stop-form"><label class="field">Weiteren Ort auswählen<select name="place">${placeOptions()}</select></label><button class="button secondary" type="submit"${entry.stops.length >= 9 ? ' disabled' : ''}>Stopp hinzufügen</button></form></section>
+    <form id="stop-form">${plan.active === 'grand' ? '<p class="muted">Wählt eine oder mehrere tropische Basen. Die Nächte und Reihenfolge könnt ihr anschließend ändern.</p>' : ''}<label class="field">Weiteren Ort auswählen<select name="place">${placeOptions()}</select></label><button class="button secondary" type="submit"${entry.stops.length >= 9 ? ' disabled' : ''}>Stopp hinzufügen</button></form></section>
     <section class="panel"><h3>Route auf der Karte</h3>${routeMap(entry.stops)}
     <p class="muted">Vereinfachte Geografie. Die Linien verbinden Stopps in Reise-Reihenfolge. Umstiege stehen im Tagesplan.</p>
     <h3>Tagesplan</h3><ol id="schedule" class="schedule">${timeline(entry)}</ol>
@@ -318,6 +323,13 @@ document.addEventListener('click',event => {
   if (action === 'reject') entry.rejected.push(id);
   if (action === 'reset-rejections') entry.rejected = [];
   if (action === 'unfavorite') entry.favorites = entry.favorites.filter(item => item !== id);
+  if (action === 'custom-grand' && plan.active === 'grand' && !entry.stops.length) {
+    entry.stops = patagoniaRoute(entry.profile);
+    persist('Patagonien-Route erstellt. Ergänzt eure tropischen Stopps.');
+    if (current() === 'route') render(true);
+    else location.hash = 'route';
+    return;
+  }
   if (action === 'build') {
     if (entry.stops.length && !window.confirm('Bestehende Stopps und Aktivitäten dieser Reise durch die neue Route ersetzen?')) return;
     entry.stops = starterRoute(plan.active,id,entry.profile);

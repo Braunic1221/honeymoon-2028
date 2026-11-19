@@ -7,6 +7,7 @@ test('matching responds to profile, exclusions, remembered choices and budget', 
   p.profile.interests = ['Strand','Romantik'];
   p.profile.hotel = 'Luxus';
   p.profile.budget = 6500;
+  p.profile.must = 'Kleftiko';
   p.profile.activities = ['Schnorcheln','Bootsausflüge'];
   assert.equal(rank('mini',p)[0].d.id,'milos');
   p.rejected.push('milos');
@@ -58,7 +59,7 @@ test('every catalog idea can be saved and compared for either trip', () => {
     const entry = plan.trips[key];
     const candidates = rank(key,entry);
     entry.favorites = candidates.map(item => item.d.id);
-    assert.ok(entry.favorites.length > 2);
+    assert.ok(entry.favorites.length >= 20);
     assert.deepEqual(rank(key,entry),[]);
     const comparison = compareFavorites(key,entry);
     assert.equal(comparison.length,entry.favorites.length);
@@ -66,4 +67,36 @@ test('every catalog idea can be saved and compared for either trip', () => {
     assert.ok(comparison.every(item => item.total > 0 && item.days > 0));
   }
   assert.deepEqual(readPlan(JSON.stringify(plan)),plan);
+});
+
+test('each trip offers at least 20 distinct, individually rejectable ideas', () => {
+  for (const key of ['mini','grand']) {
+    const entry = blankPlan().trips[key];
+    const seen = new Set();
+    for (let next; (next = rank(key,entry)[0]);) {
+      assert.ok(!seen.has(next.d.id));
+      seen.add(next.d.id);
+      entry.rejected.push(next.d.id);
+    }
+    assert.ok(seen.size >= 20);
+  }
+});
+
+test('two-island starters keep both Patagonia countries and account for the local transfer', () => {
+  const entry = blankPlan().trips.grand;
+  for (const [idea,first,last,transfer] of [
+    ['bonaire','bonaire','curacao','Regionalflug'],
+    ['providencia','sanandres','providencia','Freigepäck'],
+    ['caulker','belize','caulker','Wassertaxi'],
+    ['cozumel','mujeres','cozumel','Playa del Carmen'],
+  ]) {
+    entry.stops = starterRoute('grand',idea,entry.profile);
+    assert.deepEqual(entry.stops.map(stop => stop.place),['calafate','natales',first,last]);
+    const days = calendar('grand',entry);
+    assert.equal(days.length,21);
+    assert.ok(days.some(day => day.detail.includes(transfer)));
+    const original = estimate('grand',entry).total;
+    entry.stops.at(-1).nights++;
+    assert.ok(estimate('grand',entry).total > original);
+  }
 });

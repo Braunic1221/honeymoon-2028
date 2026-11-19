@@ -1,4 +1,4 @@
-import { activities, destinations, hotels, interests, places, transfer, trips } from './catalog.js';
+import { activities, beachCombinations, destinations, hotels, interests, places, transfer, trips } from './catalog.js';
 
 export const labels = { flights:'Flüge', lodging:'Unterkünfte', transfers:'Transfers', activities:'Aktivitäten', food:'Verpflegung', reserve:'Reserve' };
 export const defaults = { flights:100, lodging:100, transfers:100, activities:100, food:100, reserve:12 };
@@ -56,11 +56,18 @@ export function readPlan(raw) {
 
 export const makeStop = (place,nights) => ({place,nights,activities:[...places[place].experiences]});
 
+export function patagoniaRoute(profile, beachStops = 1) {
+  const includeChalten = profile.changes >= 2 + beachStops;
+  return includeChalten
+    ? [makeStop('calafate',2),makeStop('chalten',3),makeStop('natales',4)]
+    : [makeStop('calafate',5),makeStop('natales',4)];
+}
+
 export function starterRoute(key, idea, profile) {
   if (key === 'mini') return [makeStop(idea, trips.mini.days - (places[idea].effort >= 2 ? 3 : 1))];
-  return [makeStop('calafate',2), makeStop('chalten',3), makeStop('natales',4), makeStop(idea,idea === 'palawan' ? 7 : 8)]
-    .filter(stop => profile.changes >= 3 || stop.place !== 'chalten')
-    .map(stop => profile.changes < 3 && stop.place === 'calafate' ? makeStop('calafate',5) : stop);
+  const beaches = beachCombinations[idea] ?? [idea];
+  const nights = places[beaches[0]].effort === 3 ? 7 : 8;
+  return [...patagoniaRoute(profile,beaches.length),...beaches.map(place => makeStop(place,nights/beaches.length))];
 }
 
 export function calendar(key, entry) {
@@ -95,10 +102,12 @@ export function calendar(key, entry) {
 export function estimate(key,entry) {
   const base = {flights:0,lodging:0,transfers:0,activities:0,food:0};
   let previous;
+  let extraFlights = 0;
   const factor = {Boutique:1,Luxus:1.55,Resort:1.25,Außergewöhnlich:1.15,Preisbewusst:.68}[entry.profile.hotel];
   for (const stop of entry.stops) {
     const d = places[stop.place];
-    const [,,legCost] = transfer(previous,stop.place,key);
+    const [,,legCost,regionalFlight] = transfer(previous,stop.place,key);
+    extraFlights += regionalFlight ?? (key === 'mini' && previous && previous !== stop.place ? 550 : 0);
     base.flights = Math.max(base.flights, d.flights ?? 2300);
     base.lodging += stop.nights * d.night * factor;
     base.transfers += legCost;
@@ -108,7 +117,7 @@ export function estimate(key,entry) {
   }
   if (entry.stops.length) {
     base.transfers += key === 'grand' ? 160 : 75;
-    base.flights += Math.max(0, new Set(entry.stops.filter(stop => places[stop.place].trip).map(stop => stop.place)).size - 1) * 550;
+    base.flights += extraFlights;
   }
   const items = Object.fromEntries(Object.entries(base).map(([id,value]) => [id,Math.round(value * entry.rates[id]/100)]));
   const subtotal = Object.values(items).reduce((sum,value) => sum + value,0);
@@ -135,8 +144,8 @@ function evaluate(key,entry,candidates,withAffinity) {
     },0);
     const score = 10 * d.season + 7 * matches.length + (hotel ? 8 : 0) + 5 * must.length - 12 * avoid.length +
       (budget ? 7 : -Math.min(18,(total-p.budget)/500)) - (p.pace === 'Entspannt' ? 10 : 5) * d.effort +
-      (key === 'grand' && p.changes < 3 && d.effort > 1 ? -8 : 0) + affinity;
-    return {d,score,matches,hotel,must,avoid,total,budget,days:calendar(key,draft).length,changes:draft.stops.length - 1};
+      (key === 'grand' && p.changes < 3 && d.effort > 1 ? -8 : 0) + Math.max(-10,Math.min(10,affinity));
+    return {d,score,matches,hotel,must,avoid,total,budget,days:calendar(key,draft).length,changes:draft.stops.length - 1, itinerary:draft.stops.map(stop => places[stop.place].base ?? places[stop.place].name)};
   }).sort((a,b) => b.score - a.score || a.d.name.localeCompare(b.d.name,'de'));
 }
 

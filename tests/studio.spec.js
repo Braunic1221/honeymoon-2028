@@ -76,7 +76,7 @@ test('December suggestions create a separate Patagonia and beach itinerary',asyn
   await page.getByRole('link',{name:/Auswahl fertig/}).click();
   await page.getByRole('button',{name:'Route erstellen'}).click();
   await expect(page.getByRole('heading',{name:'1. El Calafate'})).toBeVisible();
-  await expect(page.getByRole('heading',{name:'3. Puerto Natales'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:/Puerto Natales/})).toBeVisible();
   await expect(page.locator('time[datetime="2028-12-25"]')).toBeVisible();
   await page.getByRole('button',{name:'Mini-Moon',exact:true}).click();
   await expect(page.getByRole('link',{name:'Zu den Reiseideen'})).toBeVisible();
@@ -107,4 +107,24 @@ test('both trips can compare more than two favorites and resume collecting', asy
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize().width);
     await activate(page.getByRole('link',{name:'Weitere Reiseideen ansehen'}));
   }
+});
+
+test('December catalog opens with 20 ideas and supports a custom two-island itinerary', async ({page,isMobile}) => {
+  const activate = locator => isMobile ? locator.tap() : locator.click();
+  await page.goto('./#ideen');
+  await activate(page.getByRole('button',{name:'Große Flitterwochen',exact:true}));
+  await expect(page.getByText(/20 offene Ideen/)).toBeVisible();
+  await activate(page.getByRole('button',{name:'Nicht unser Ding – nächste Idee'}));
+  await expect(page.getByText(/19 offene Ideen/)).toBeVisible();
+  await activate(page.getByRole('button',{name:'Dezemberroute selbst zusammenstellen'}));
+  await expect(page.getByRole('heading',{name:/El Calafate/})).toBeVisible();
+  for (const place of ['sanandres','providencia']) {
+    await page.getByLabel('Weiteren Ort auswählen').selectOption(place);
+    await activate(page.getByRole('button',{name:'Stopp hinzufügen'}));
+  }
+  await expect(page.getByRole('heading',{name:'4. San Andrés'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'5. Providencia'})).toBeVisible();
+  await expect(page.locator('#schedule')).toContainText('begrenztes Freigepäck');
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'5. Providencia'})).toBeVisible();
 });
