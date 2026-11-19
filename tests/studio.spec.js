@@ -1,29 +1,30 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
-test('from first visit to preferences, ratings, editable route, budget and portable file', async ({page}) => {
+test('from first visit to preferences, ratings, editable route, budget and portable file', async ({page,isMobile}) => {
+  const activate = locator => isMobile ? locator.tap() : locator.click();
   const errors = [];
   page.on('pageerror',error => errors.push(error.message));
   await page.goto('./');
   await expect(page.getByRole('heading',{name:/Die Welt wartet/})).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize().width);
-  await page.getByRole('link',{name:'Beratung starten'}).click();
-  await page.getByText('Strand',{exact:true}).click();
-  await page.getByText('Schnorcheln',{exact:true}).click();
+  await activate(page.getByRole('link',{name:'Beratung starten'}));
+  await activate(page.getByText('Strand',{exact:true}));
+  await activate(page.getByText('Schnorcheln',{exact:true}));
   await page.getByLabel('Hotelstandard').selectOption('Luxus');
   await page.getByLabel(/Zielbudget/).fill('6500');
-  await page.getByRole('button',{name:'Passende Reiseideen ansehen'}).click();
+  await activate(page.getByRole('button',{name:'Passende Reiseideen ansehen'}));
   const title = page.locator('#idea-title');
   const first = await title.innerText();
   await expect(page.locator('.recommendation img')).toHaveJSProperty('complete',true);
   expect(await page.locator('.recommendation img').evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
-  await page.getByRole('button',{name:'Nicht unser Ding – nächste Idee'}).click();
+  await activate(page.getByRole('button',{name:'Nicht unser Ding – nächste Idee'}));
   await expect(title).not.toHaveText(first);
   await page.reload();
   await expect(title).not.toHaveText(first);
-  await page.getByRole('button',{name:'Gefällt uns'}).click();
+  await activate(page.getByRole('button',{name:'Gefällt uns'}));
   await expect(page.getByText('Eure Favoriten · 1/2')).toBeVisible();
-  await page.getByRole('button',{name:'Route erstellen'}).click();
+  await activate(page.getByRole('button',{name:'Route erstellen'}));
   await expect(page.getByRole('img',{name:/Weltkarte/})).toBeVisible();
   await page.getByLabel('Weiteren Ort auswählen').selectOption('azoren');
   await page.getByRole('button',{name:'Stopp hinzufügen'}).click();

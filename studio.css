@@ -49,7 +49,7 @@ em{font-weight:400;color:#6b7655}
 .grand{--trip-image:url('./media/patagonia.webp')}
 .trip-card .eyebrow{color:var(--gold)}
 .trip-card p:last-child{margin:0}
-.trip-card>span{border:1px solid #e8d6b3;border-radius:50%;width:42px;height:42px;display:grid;place-items:center;flex:none}
+.trip-card>.arrow{border:1px solid #e8d6b3;border-radius:50%;width:42px;height:42px;display:grid;place-items:center;flex:none}
 footer{display:flex;justify-content:space-between;gap:15px;align-items:center;border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-size:12px;letter-spacing:.07em}
 footer a{min-height:44px;display:grid;align-items:center;text-decoration:underline}
 .workspace{padding-block:40px 60px;min-height:74vh}
@@ -100,3 +100,10 @@ legend{font-weight:700;margin-bottom:8px}
 .rec-copy .actions{margin-top:18px}
 .money{overflow-wrap:anywhere}
 .schedule li:last-child{border-bottom:none}
+
+.arrow{display:inline-grid;place-items:center;width:14px;height:14px;flex:none}
+.arrow::before,.arrow::after{content:"";grid-area:1/1}
+.arrow::before{width:11px;height:1px;background:currentColor;transform:rotate(-45deg)}
+.arrow::after{width:6px;height:6px;border-top:1px solid currentColor;border-right:1px solid currentColor;transform:translate(2px,-2px)}
+.arrow.up{transform:rotate(-45deg)}
+.arrow.down{transform:rotate(135deg)}

@@ -56,7 +56,7 @@ function profile(entry) {
       <label class="field">Das möchten wir unbedingt erleben<textarea name="must" maxlength="500" rows="2">${escape(p.must)}</textarea></label>
       <label class="field">Das möchten wir vermeiden<textarea name="avoid" maxlength="500" rows="2">${escape(p.avoid)}</textarea></label>
     </div>
-    <button class="button" type="submit">Passende Reiseideen ansehen <span aria-hidden="true">↗</span></button>
+    <button class="button" type="submit">Passende Reiseideen ansehen <span class="arrow" aria-hidden="true"></span></button>
   </form>`;
 }
 
@@ -108,8 +108,8 @@ function route(entry) {
     <label class="field">Abreisedatum<input data-change="start" type="date" min="2028-01-01" max="2028-12-31" value="${entry.start}" required></label>
     <div>${entry.stops.map((stop,i) => `<section class="stop">
       <div class="stop-head"><h3>${i+1}. ${places[stop.place].base ?? places[stop.place].name}</h3><div class="actions">
-        <button class="button secondary" data-action="up" data-index="${i}" aria-label="Stopp ${i+1} nach oben"${i === 0 ? ' disabled' : ''}>↑</button>
-        <button class="button secondary" data-action="down" data-index="${i}" aria-label="Stopp ${i+1} nach unten"${i === changes ? ' disabled' : ''}>↓</button>
+        <button class="button secondary" data-action="up" data-index="${i}" aria-label="Stopp ${i+1} nach oben"${i === 0 ? ' disabled' : ''}><span class="arrow up" aria-hidden="true"></span></button>
+        <button class="button secondary" data-action="down" data-index="${i}" aria-label="Stopp ${i+1} nach unten"${i === changes ? ' disabled' : ''}><span class="arrow down" aria-hidden="true"></span></button>
         <button class="button secondary" data-action="remove" data-index="${i}" aria-label="Stopp ${i+1} entfernen">×</button>
       </div></div>
       <label class="field">Stopp ${i+1} austauschen<select data-change="place" data-index="${i}">${placeOptions(stop.place)}</select></label>
